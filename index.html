@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capybara Advent Calendar 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 50%, #1a472a 100%);
+            font-family: 'Georgia', serif;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #e8d5b7;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .window {
+            aspect-ratio: 1;
+            position: relative;
+            perspective: 800px;
+            cursor: pointer;
+        }
+
+        .window.locked {
+            cursor: not-allowed;
+        }
+
+        .window.opened {
+            cursor: default;
+        }
+
+        .window-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 3px solid #ffd700;
+        }
+
+        .window.locked .window-inner {
+            border-color: #888;
+        }
+
+        /* The image behind the doors */
+        .window-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #2a1a0a;
+        }
+
+        .window-content img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Door styles */
+        .door {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(145deg, #8b0000, #a52a2a);
+            transition: transform 0.8s ease-in-out;
+            transform-style: preserve-3d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backface-visibility: hidden;
+        }
+
+        .door::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.2) 100%);
+            pointer-events: none;
+        }
+
+        .door-left {
+            left: 0;
+            transform-origin: left center;
+            border-right: 1px solid #5a0000;
+        }
+
+        .door-right {
+            right: 0;
+            transform-origin: right center;
+            border-left: 1px solid #5a0000;
+        }
+
+        .window.locked .door {
+            background: linear-gradient(145deg, #4a4a4a, #5a5a5a);
+        }
+
+        .window.locked .door-left {
+            border-right-color: #333;
+        }
+
+        .window.locked .door-right {
+            border-left-color: #333;
+        }
+
+        /* Door number */
+        .door-number {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+
+        .window.locked .door-number {
+            color: #888;
+        }
+
+        .door-left .door-number {
+            right: -0.5rem;
+        }
+
+        .door-right .door-number {
+            left: -0.5rem;
+        }
+
+        /* Door handles */
+        .door-handle {
+            position: absolute;
+            width: 8px;
+            height: 20px;
+            background: #ffd700;
+            border-radius: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .window.locked .door-handle {
+            background: #666;
+        }
+
+        .door-left .door-handle {
+            right: 8px;
+        }
+
+        .door-right .door-handle {
+            left: 8px;
+        }
+
+        /* Opened state */
+        .window.opened .door-left {
+            transform: rotateY(-130deg);
+        }
+
+        .window.opened .door-right {
+            transform: rotateY(130deg);
+        }
+
+        /* Hover effect */
+        .window:hover:not(.opened):not(.locked) .door-left {
+            transform: rotateY(-10deg);
+        }
+
+        .window:hover:not(.opened):not(.locked) .door-right {
+            transform: rotateY(10deg);
+        }
+
+        /* Day label for opened windows */
+        .day-label {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: #ffd700;
+            padding: 2px 10px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.3s 0.5s;
+        }
+
+        .window.opened .day-label {
+            opacity: 1;
+        }
+
+        .snowflake {
+            position: fixed;
+            color: #fff;
+            font-size: 1.5rem;
+            opacity: 0.8;
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 1000;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+
+        .info {
+            text-align: center;
+            color: #e8d5b7;
+            margin-top: 30px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capybara Advent Calendar</h1>
+    <p class="subtitle">December 2025</p>
+
+    <div class="calendar" id="calendar"></div>
+
+    <p class="info">Click on a window to reveal your daily capybara!</p>
+
+    <script>
+        const AVAILABLE_IMAGES = [1, 2, 3, 4, 5, 6];
+        const TOTAL_DAYS = 24;
+
+        function getToday() {
+            const now = new Date();
+            // For testing, uncomment the line below and set desired date:
+            // return { month: 11, day: 6 }; // December 6th
+            return { month: now.getMonth(), day: now.getDate() };
+        }
+
+        function canOpen(day) {
+            const today = getToday();
+            if (today.month === 11) {
+                return day <= today.day;
+            }
+            if (today.month < 11) {
+                return false;
+            }
+            return true;
+        }
+
+        function hasImage(day) {
+            return AVAILABLE_IMAGES.includes(day);
+        }
+
+        function getOpenedDays() {
+            const stored = localStorage.getItem('capybara-advent-2025');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveOpenedDay(day) {
+            const opened = getOpenedDays();
+            if (!opened.includes(day)) {
+                opened.push(day);
+                localStorage.setItem('capybara-advent-2025', JSON.stringify(opened));
+            }
+        }
+
+        function createWindowElement(day, isOpened, isOpenable, hasImg) {
+            const window = document.createElement('div');
+            window.className = 'window';
+            window.dataset.day = day;
+
+            const dayNum = day.toString();
+            const leftDigit = dayNum.length > 1 ? dayNum[0] : '';
+            const rightDigit = dayNum.length > 1 ? dayNum[1] : dayNum[0];
+
+            window.innerHTML = `
+                <div class="window-inner">
+                    <div class="window-content">
+                        ${hasImg ? `<img src="dec-${day}.jpg" alt="Capybara day ${day}">` : ''}
+                    </div>
+                    <div class="door door-left">
+                        <span class="door-number">${leftDigit}</span>
+                        <span class="door-handle"></span>
+                    </div>
+                    <div class="door door-right">
+                        <span class="door-number">${rightDigit}</span>
+                        <span class="door-handle"></span>
+                    </div>
+                    <span class="day-label">Dec ${day}</span>
+                </div>
+            `;
+
+            if (isOpened) {
+                window.classList.add('opened');
+            } else if (!isOpenable || !hasImg) {
+                window.classList.add('locked');
+                if (!hasImg && isOpenable) {
+                    window.title = 'Image coming soon!';
+                }
+            } else {
+                window.onclick = () => openWindow(day);
+            }
+
+            return window;
+        }
+
+        function createCalendar() {
+            const calendar = document.getElementById('calendar');
+            const opened = getOpenedDays();
+
+            const fixedOrder = [24, 7, 15, 3, 19, 11, 1, 22, 8, 16, 4, 20, 12, 2, 23, 9, 17, 5, 21, 13, 6, 14, 10, 18];
+
+            fixedOrder.forEach(day => {
+                const isOpenable = canOpen(day);
+                const isOpened = opened.includes(day) && hasImage(day);
+                const hasImg = hasImage(day);
+
+                const windowEl = createWindowElement(day, isOpened, isOpenable, hasImg);
+                calendar.appendChild(windowEl);
+            });
+        }
+
+        function celebrateConfetti() {
+            const duration = 2000;
+            const end = Date.now() + duration;
+            const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7'];
+
+            (function frame() {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.7 },
+                    colors: colors
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.7 },
+                    colors: colors
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: colors
+            });
+        }
+
+        function openWindow(day) {
+            if (!canOpen(day) || !hasImage(day)) return;
+
+            saveOpenedDay(day);
+
+            const windowEl = document.querySelector(`.window[data-day="${day}"]`);
+            windowEl.classList.add('opened');
+            windowEl.onclick = null;
+
+            celebrateConfetti();
+        }
+
+        function createSnowflakes() {
+            const snowflakes = ['❄', '❅', '❆'];
+            for (let i = 0; i < 20; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+                flake.style.left = Math.random() * 100 + 'vw';
+                flake.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                flake.style.animationDelay = (Math.random() * 10) + 's';
+                flake.style.fontSize = (Math.random() * 1 + 0.5) + 'rem';
+                document.body.appendChild(flake);
+            }
+        }
+
+        createCalendar();
+        createSnowflakes();
+    </script>
+</body>
+</html>
