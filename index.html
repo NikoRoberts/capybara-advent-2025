@@ -55,7 +55,7 @@
         }
 
         .window.opened {
-            cursor: default;
+            cursor: pointer;
         }
 
         .window-inner {
@@ -324,15 +324,16 @@
                 </div>
             `;
 
-            if (isOpened) {
-                window.classList.add('opened');
-            } else if (!isOpenable || !hasImg) {
+            if (!isOpenable || !hasImg) {
                 window.classList.add('locked');
                 if (!hasImg && isOpenable) {
                     window.title = 'Image coming soon!';
                 }
             } else {
-                window.onclick = () => openWindow(day);
+                if (isOpened) {
+                    window.classList.add('opened');
+                }
+                window.onclick = () => toggleWindow(day, isOpened);
             }
 
             return window;
@@ -388,16 +389,23 @@
             });
         }
 
-        function openWindow(day) {
+        function toggleWindow(day, wasAlreadyOpened) {
             if (!canOpen(day) || !hasImage(day)) return;
 
-            saveOpenedDay(day);
-
             const windowEl = document.querySelector(`.window[data-day="${day}"]`);
-            windowEl.classList.add('opened');
-            windowEl.onclick = null;
+            const isCurrentlyOpen = windowEl.classList.contains('opened');
 
-            celebrateConfetti();
+            if (isCurrentlyOpen) {
+                windowEl.classList.remove('opened');
+            } else {
+                windowEl.classList.add('opened');
+
+                saveOpenedDay(day);
+                celebrateConfetti();
+                const audio = new Audio('c.mp3');
+                audio.play();
+
+            }
         }
 
         function createSnowflakes() {
